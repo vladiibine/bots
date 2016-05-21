@@ -2,6 +2,7 @@ from __future__ import print_function
 
 from autopy import mouse
 from autopy import screen
+from autopy import key
 import time
 from datetime import datetime
 
@@ -20,6 +21,26 @@ p11_free_play_outside_event = (994, 351)
 p12_start_mission = (1240, 676)
 p13_next_level_check_pos = (1381, 333)
                                       
+p14_browser_refresh = (880, 71)
+p15_js_console = (937, 891)
+p16_close_feedback_div = (1273, 166)
+p17_close_chat = (1567, 131)
+p18_start_flash_app = (958, 653)
+
+js_setup = """\
+var children = Array.from($('#content-canvas').children()); 
+/* Remove the commercials at the top */
+for(let child of children){
+    if(['DIV', 'SECTION'].indexOf(child.tagName) !== -1 && child.id !== 'gamearea'){
+        child.remove()
+    }
+    if (child.id === 'gamearea'){
+        break;
+    }
+}
+"""
+special_chars="""\
+~!@#$%^&*()_+{}:\"<>?"""
 next_level_check_colors = {           
  '0xb9a363',                          
  '0xb9a566',                          
@@ -94,7 +115,7 @@ def click_and_wait(position, seconds=0):
         mouse.smooth_move(*position)
         mouse.click()
 
-    time.sleep(seconds)
+    sleep(seconds)
 
 
 def repeat_action(position, times, wait):
@@ -146,3 +167,40 @@ def initial_sequence():
         repeat_action(p2_confirm_upgrade, 1, 1)
     
     
+def restart_browser():
+    """restarts the browser and sets the game window to be where expected"""
+    click_and_wait(p14_browser_refresh, 20)
+    tap(key.K_F12)
+    sleep(4)
+    click_and_wait(p15_js_console, 3)
+    for char in ' '.join(js_setup.splitlines()):
+        if char in special_chars:
+            key.tap(char, key.K_SHIFT)
+        else:
+            key.tap(char)
+    sleep(2)
+    key.tap(key.K_RETURN)
+    sleep(3)
+    key.tap(key.K_F12)
+    click_and_wait(p16_close_feedback_div, 2)
+    click_and_wait(p17_close_chat, 2)
+    click_and_wait(p18_start_flash_app, 20)
+
+def sleep(seconds):
+    """I'll use this for reportin how much time i'm waiting i guess"""
+    # Divide seconds into N x 1 second intervals + 1 0.X interval
+    whole_seconds = int(seconds)
+    remaining_seconds = seconds - whole_seconds
+    for _ in range(whole_seconds):
+        time.sleep(1)
+        #then report...somehow
+    time.sleep(remaining_seconds)
+
+def report(text):
+    import sys
+    sys.stdout.flush()
+    print('\r' + text, end="")
+
+def tap(key_to_tap):
+    """Wraps autopy.key.tap, for reporting reporting"""
+    key.tap(key_to_tap)
