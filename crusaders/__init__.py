@@ -98,11 +98,15 @@ def run_forever(skip_initial=False, skip_main=False, normal_campaing=True,
 def main_sequence():
     """This buys levels and upgrades"""
     click_and_wait(p1_level_crusaders, 2)
-    click_and_wait(p2_confirm_upgrade, 22)
+    click_and_wait(p2_confirm_upgrade, 2)  # it was a 22 sec wait
+    for _ in range(5):
+        sweep_items(4)
     click_and_wait(p3_buy_upgrades, 7)
-    click_and_wait(p2_confirm_upgrade, 20)
+    click_and_wait(p2_confirm_upgrade, 2)  # it was a 20 sec wait
+    for _ in range(5):
+        sweep_items(4)
 
-def click_and_wait(position, seconds=0):
+def click_and_wait(position, seconds=0, no_click=False):
     """Go to `position`, click and wait a number of `seconds`.
 
     Extra: only move and click if the mouse is on the right of the screen!!!
@@ -113,14 +117,29 @@ def click_and_wait(position, seconds=0):
     #print("INFO: click_and_wait: {}".format(locals()))
     if mouse_pos_x >= screen_resolution_x / 2:
         mouse.smooth_move(*position)
-        mouse.click()
+        if not no_click:
+            mouse.click()
 
     sleep(seconds)
 
 
-def repeat_action(position, times, wait):
+def repeat_action(positions, times, wait):
+    def is_single_position(position):
+        if not isinstance(position, (tuple, list)):
+            return False
+        if not len(position) == 2:
+            return false
+        if not set(type(pos for pos in position)) == {int}:
+            return False
+        return True
+
+
     for _ in range(times):
-        click_and_wait(position, wait)
+        if is_single_position(positions):
+            click_and_wait(positions, wait)
+        else:
+            for position in positions:
+                click_and_wait(position, float(wait)/len(positions))
 
 
 def reset_world(normal_campaign, event_ongoing):
@@ -204,3 +223,7 @@ def report(text):
 def tap(key_to_tap):
     """Wraps autopy.key.tap, for reporting reporting"""
     key.tap(key_to_tap)
+
+def sweep_items(wait=0):
+    click_and_wait(p0_click_monsters, wait/2.0, no_click=True)
+    click_and_wait(p2_confirm_upgrade, wait/2.0, no_click=True)
