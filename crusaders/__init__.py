@@ -129,7 +129,7 @@ def repeat_action(positions, times, wait):
             return False
         if not len(position) == 2:
             return false
-        if not set(type(pos for pos in position)) == {int}:
+        if not set((type(pos) for pos in position)) == {int}:
             return False
         return True
 
