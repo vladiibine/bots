@@ -81,7 +81,12 @@ def run_forever(skip_initial=False, skip_main=False, normal_campaing=True,
                 t1 = int(time.time())
                 print("Started main sequence at {}".format(str(datetime.now())))
                 while int(time.time()) - t1 < play_seconds - skip_seconds:
-                    main_sequence()
+                    try:
+                        main_sequence()
+                    except KeyboardInterrupt:
+                        print("Interrupted, but taking a pause only")
+                        print("Hit Ctrl+C again, to quit, or return, to continue")
+                        _ = raw_input('')
                 skip_seconds = 0
             else:
                 skip_main = False
@@ -106,7 +111,7 @@ def main_sequence():
     for _ in range(5):
         sweep_items(4)
 
-def click_and_wait(position, seconds=0, no_click=False):
+def click_and_wait(position=None, seconds=0, click=True):
     """Go to `position`, click and wait a number of `seconds`.
 
     Extra: only move and click if the mouse is on the right of the screen!!!
@@ -114,10 +119,10 @@ def click_and_wait(position, seconds=0, no_click=False):
     screen_resolution_x = screen.get_size()[0]
     mouse_pos_x = mouse.get_pos()[0]
     
-    #print("INFO: click_and_wait: {}".format(locals()))
     if mouse_pos_x >= screen_resolution_x / 2:
-        mouse.smooth_move(*position)
-        if not no_click:
+        if position:
+            mouse.smooth_move(*position)
+        if click:
             mouse.click()
 
     sleep(seconds)
@@ -186,9 +191,12 @@ def initial_sequence():
         repeat_action(p2_confirm_upgrade, 1, 1)
     
     
-def restart_browser():
+def restart_browser(refresh=True, start_game=True):
     """restarts the browser and sets the game window to be where expected"""
-    click_and_wait(p14_browser_refresh, 20)
+    if refresh:
+        click_and_wait(p14_browser_refresh, 20)
+    else:
+        click_and_wait()
     tap(key.K_F12)
     sleep(4)
     click_and_wait(p15_js_console, 3)
@@ -203,7 +211,8 @@ def restart_browser():
     key.tap(key.K_F12)
     click_and_wait(p16_close_feedback_div, 2)
     click_and_wait(p17_close_chat, 2)
-    click_and_wait(p18_start_flash_app, 20)
+    if start_game:
+        click_and_wait(p18_start_flash_app, 20)
 
 def sleep(seconds):
     """I'll use this for reportin how much time i'm waiting i guess"""
@@ -225,5 +234,5 @@ def tap(key_to_tap):
     key.tap(key_to_tap)
 
 def sweep_items(wait=0):
-    click_and_wait(p0_click_monsters, wait/2.0, no_click=True)
-    click_and_wait(p2_confirm_upgrade, wait/2.0, no_click=True)
+    click_and_wait(p0_click_monsters, wait/2.0, click=False)
+    click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
