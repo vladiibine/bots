@@ -118,18 +118,23 @@ class Game(object):
                 print("Interrupted. Played for {}. Remaining {}"
                         .format(t2-t1, self.play_seconds-self.skip_seconds - (t2 - t1)))
 
-    def main_sequence(self, bot=None):
+    def main_sequence(self, bot=None, forever=False):
         """This buys levels and upgrades"""
         bot = bot or self.bot
 
-        bot.click_and_wait(p1_level_crusaders, 2)
-        #bot.click_and_wait(p2_confirm_upgrade, 2)  # it was a 22 sec wait
-        for _ in range(6):
-            bot.sweep_items(4)
-        bot.click_and_wait(p3_buy_upgrades, 2)
-        #bot.click_and_wait(p2_confirm_upgrade, 2)  # it was a 20 sec wait
-        for _ in range(6):
-            bot.sweep_items(4)
+        def run_sequence():
+            bot.click_and_wait(p1_level_crusaders, 2)
+            for _ in range(6):
+                bot.sweep_items(4)
+            bot.click_and_wait(p3_buy_upgrades, 2)
+            for _ in range(6):
+                bot.sweep_items(4)
+
+        if forever:
+            while True:
+                run_sequence()
+        else:
+            run_sequence()
 
     def reset_world(self, normal_campaign, event_ongoing, bot=None):
         """This resets the world, after a certain amount of time
