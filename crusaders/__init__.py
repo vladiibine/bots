@@ -57,182 +57,209 @@ next_level_check_colors = {
  '0xbdab6f'}                          
 
 
+class Game(object):
+    def get_bot_class(self):
+        return Bot
 
-def run_forever(skip_initial=False, skip_main=False, normal_campaing=True, 
-        event_ongoing=True, skip_seconds=0, play_seconds=5200):
-    """plays forever
-    
-    :param bool skip_initial: whether to skip the initial sequence
-    :param bool skip_main: whether to skip the main sequence
-    :param bool normal_campaing: try to play the normal campaign
-    :param bool event_ongoing: if there currently an ongoing event?
-    :param int skip_seconds: from the main sequence, skip this many seconds
-    :param int play_seconds: play the main sequence for this many seconds
-    """
-    t1 = None
-    try:
-        while True:
-            if not skip_initial:
-                initial_sequence()
-            else:
-                skip_initial = False
-            
-            if not skip_main:
-                t1 = int(time.time())
-                print("Started main sequence at {}".format(str(datetime.now())))
-                while int(time.time()) - t1 < play_seconds - skip_seconds:
-                    try:
-                        main_sequence()
-                    except KeyboardInterrupt:
-                        print("Interrupted, but taking a pause only")
-                        print("Hit Ctrl+C again, to quit, or return, to continue")
-                        _ = raw_input('')
-                skip_seconds = 0
-            else:
-                skip_main = False
+    def __init__(self, skip_initial=False, skip_main=False,
+            normal_campaing=True, event_ongoing=True, skip_seconds=0,
+            offset_x=0, offset_y=0,play_seconds=5200):
+        """
+        :param bool skip_initial: whether to skip the initial sequence
+        :param bool skip_main: whether to skip the main sequence
+        :param bool normal_campaing: try to play the normal campaign
+        :param bool event_ongoing: if there currently an ongoing event?
+        :param int skip_seconds: from the main sequence, skip this many seconds
+        :param int play_seconds: play the main sequence for this many seconds
+        :param int offset_x: number of pixels by which to offset the bot on OX
+        :param int offset_y: number of pixel by which to offset the bot on OY
+        """
+        self.bot = self.get_bot_class()(offset_x, offset_y)
 
-            print("Started to reset at {}".format(str(datetime.now())))
-            reset_world(normal_campaing, event_ongoing)
-    except KeyboardInterrupt:
-        if t1 is not None:
-            t2 = int(time.time())
-            print("Interrupted. Played for {}. Remaining {}"
-                    .format(t2-t1, play_seconds-skip_seconds - (t2 - t1)))
+        self.skip_initial = skip_initial
+        self.skip_main = skip_main
+        self.normal_campaign = normal_campaing
+        self.event_ongoing = event_ongoing
+        self.skip_seconds = skip_seconds
+        self.play_seconds = play_seconds
 
 
-def main_sequence():
-    """This buys levels and upgrades"""
-    click_and_wait(p1_level_crusaders, 2)
-    click_and_wait(p2_confirm_upgrade, 2)  # it was a 22 sec wait
-    for _ in range(5):
-        sweep_items(4)
-    click_and_wait(p3_buy_upgrades, 7)
-    click_and_wait(p2_confirm_upgrade, 2)  # it was a 20 sec wait
-    for _ in range(5):
-        sweep_items(4)
+    def run_forever(self):
+        """plays forever
+        
+        """
+        t1 = None
+        try:
+            while True:
+                if not self.skip_initial:
+                    self.initial_sequence()
+                else:
+                    self.skip_initial = False
+                
+                if not self.skip_main:
+                    t1 = int(time.time())
+                    print("Started main sequence at {}".format(str(datetime.now())))
+                    while int(time.time()) - t1 < self.play_seconds - self.skip_seconds:
+                        try:
+                            self.main_sequence()
+                        except KeyboardInterrupt:
+                            print("Interrupted, but taking a pause only")
+                            print("Hit Ctrl+C again, to quit, or return, to continue")
+                            _ = raw_input('')
+                    self.skip_seconds = 0
+                else:
+                    self.skip_main = False
 
-def click_and_wait(position=None, seconds=0, click=True):
-    """Go to `position`, click and wait a number of `seconds`.
+                print("Started to reset at {}".format(str(datetime.now())))
+                self.reset_world(self.normal_campaign, self.event_ongoing)
+        except KeyboardInterrupt:
+            if t1 is not None:
+                t2 = int(time.time())
+                print("Interrupted. Played for {}. Remaining {}"
+                        .format(t2-t1, self.play_seconds-self.skip_seconds - (t2 - t1)))
 
-    Extra: only move and click if the mouse is on the right of the screen!!!
-    """
-    screen_resolution_x = screen.get_size()[0]
-    mouse_pos_x = mouse.get_pos()[0]
-    
-    if mouse_pos_x >= screen_resolution_x / 2:
-        if position:
-            mouse.smooth_move(*position)
-        if click:
-            mouse.click()
+    def main_sequence(self, bot=None):
+        """This buys levels and upgrades"""
+        bot = bot or self.bot
 
-    sleep(seconds)
+        bot.click_and_wait(p1_level_crusaders, 2)
+        #bot.click_and_wait(p2_confirm_upgrade, 2)  # it was a 22 sec wait
+        for _ in range(6):
+            bot.sweep_items(4)
+        bot.click_and_wait(p3_buy_upgrades, 2)
+        #bot.click_and_wait(p2_confirm_upgrade, 2)  # it was a 20 sec wait
+        for _ in range(6):
+            bot.sweep_items(4)
 
+    def reset_world(self, normal_campaign, event_ongoing, bot=None):
+        """This resets the world, after a certain amount of time
 
-def repeat_action(positions, times, wait):
-    def is_single_position(position):
-        if not isinstance(position, (tuple, list)):
-            return False
-        if not len(position) == 2:
-            return false
-        if not set((type(pos) for pos in position)) == {int}:
-            return False
-        return True
+        @param bool `normal_campaign`: if true, farms the normal campaign, 
+            otherwise the event's free play
+        @param bool event_ongoing: if true, it means theres an event going on 
+            currently
+        """
+        bot = bot or self.bot
 
+        bot.repeat_action(p4_next_page, 40, 1)
+        
+        bot.repeat_action(p5_reset_upgrade, 10, 3)
 
-    for _ in range(times):
-        if is_single_position(positions):
-            click_and_wait(positions, wait)
+        bot.repeat_action(p6_confirm_reset_1, 3, 3)
+
+        bot.repeat_action(p7_blow_up_world_buttom, 3, 1)
+
+        bot.repeat_action(p8_continue_to_mission_screen, 2, 10)
+
+        if not normal_campaign:
+            bot.repeat_action(p10_gardeners_free_play, 2, 5)
+            bot.repeat_action(p12_start_mission, 2, 1)
+            bot.repeat_action(p10_gardeners_free_play, 2, 5)
+            bot.repeat_action(p12_start_mission, 2, 1)
+        elif event_ongoing:
+            bot.repeat_action(p9_free_play_during_event, 1, 2)
+            bot.repeat_action(p12_start_mission, 1, 2)
+            bot.repeat_action(p9_free_play_during_event, 1, 2)
+            bot.repeat_action(p12_start_mission, 1, 2)
         else:
-            for position in positions:
-                click_and_wait(position, float(wait)/len(positions))
+            bot.repeat_action(p11_free_play_outside_event, 1, 2)
+            bot.repeat_action(p12_start_mission, 1, 2)
+            bot.repeat_action(p11_free_play_outside_event, 1, 2)
+            bot.repeat_action(p12_start_mission, 1, 2)
 
-
-def reset_world(normal_campaign, event_ongoing):
-    """This resets the world, after a certain amount of time
-
-    @param bool `normal_campaign`: if true, farms the normal campaign, 
-        otherwise the event's free play
-    @param bool event_ongoing: if true, it means theres an event going on 
-        currently
-    """
-
-    repeat_action(p4_next_page, 40, 1)
-    
-    repeat_action(p5_reset_upgrade, 10, 3)
-
-    repeat_action(p6_confirm_reset_1, 3, 3)
-
-    repeat_action(p7_blow_up_world_buttom, 3, 1)
-
-    repeat_action(p8_continue_to_mission_screen, 2, 10)
-
-    if not normal_campaign:
-        repeat_action(p10_gardeners_free_play, 2, 5)
-        repeat_action(p12_start_mission, 2, 1)
-        repeat_action(p10_gardeners_free_play, 2, 5)
-        repeat_action(p12_start_mission, 2, 1)
-    elif event_ongoing:
-        repeat_action(p9_free_play_during_event, 1, 2)
-        repeat_action(p12_start_mission, 1, 2)
-        repeat_action(p9_free_play_during_event, 1, 2)
-        repeat_action(p12_start_mission, 1, 2)
-    else:
-        repeat_action(p11_free_play_outside_event, 1, 2)
-        repeat_action(p12_start_mission, 1, 2)
-        repeat_action(p11_free_play_outside_event, 1, 2)
-        repeat_action(p12_start_mission, 1, 2)
-
-def initial_sequence():
-    """Starts to click, in order to kill the first monsters, and get some gold
-    """
-    for _ in range(30):
-        repeat_action(p2_confirm_upgrade, 10, 0.3)
-        repeat_action(p1_level_crusaders, 3, 1)
-        repeat_action(p2_confirm_upgrade, 1, 1)
-    
-    
-def restart_browser(refresh=True, start_game=True):
-    """restarts the browser and sets the game window to be where expected"""
-    if refresh:
-        click_and_wait(p14_browser_refresh, 20)
-    else:
-        click_and_wait()
-    tap(key.K_F12)
-    sleep(4)
-    click_and_wait(p15_js_console, 3)
-    for char in ' '.join(js_setup.splitlines()):
-        if char in special_chars:
-            key.tap(char, key.K_SHIFT)
+    def initial_sequence(self, bot=None):
+        """Starts to click, in order to kill the first monsters, and get some gold
+        """
+        bot = bot or self.bot
+        for _ in range(30):
+            bot.repeat_action(p2_confirm_upgrade, 10, 0.3)
+            bot.repeat_action(p1_level_crusaders, 3, 1)
+            bot.repeat_action(p2_confirm_upgrade, 1, 1)
+        
+        
+    def restart_browser(self, refresh=True, start_game=True, bot=None):
+        """restarts the browser and sets the game window to be where expected"""
+        bot = bot or self.bot
+        if refresh:
+            bot.click_and_wait(p14_browser_refresh, 20)
         else:
-            key.tap(char)
-    sleep(2)
-    key.tap(key.K_RETURN)
-    sleep(3)
-    key.tap(key.K_F12)
-    click_and_wait(p16_close_feedback_div, 2)
-    click_and_wait(p17_close_chat, 2)
-    if start_game:
-        click_and_wait(p18_start_flash_app, 20)
+            bot.click_and_wait()
+        bot.tap(key.K_F12)
+        bot.sleep(4)
+        bot.click_and_wait(p15_js_console, 3)
+        for char in ' '.join(js_setup.splitlines()):
+            if char in special_chars:
+                bot.key.tap(char, key.K_SHIFT)
+            else:
+                bot.key.tap(char)
+        bot.sleep(2)
+        bot.key.tap(key.K_RETURN)
+        bot.sleep(3)
+        bot.key.tap(key.K_F12)
+        bot.click_and_wait(p16_close_feedback_div, 2)
+        bot.click_and_wait(p17_close_chat, 2)
+        if start_game:
+            bot.click_and_wait(p18_start_flash_app, 20)
 
-def sleep(seconds):
-    """I'll use this for reportin how much time i'm waiting i guess"""
-    # Divide seconds into N x 1 second intervals + 1 0.X interval
-    whole_seconds = int(seconds)
-    remaining_seconds = seconds - whole_seconds
-    for _ in range(whole_seconds):
-        time.sleep(1)
-        #then report...somehow
-    time.sleep(remaining_seconds)
+class Bot(object):
+    def __init__(self, offset_x=0, offset_y=0):
+        self.offset_x = offset_x
+        self.offset_y = offset_y
 
-def report(text):
-    import sys
-    sys.stdout.flush()
-    print('\r' + text, end="")
+    def sleep(self, seconds):
+        """I'll use this for reportin how much time i'm waiting i guess"""
+        # Divide seconds into N x 1 second intervals + 1 0.X interval
+        whole_seconds = int(seconds)
+        remaining_seconds = seconds - whole_seconds
+        for _ in range(whole_seconds):
+            time.sleep(1)
+            #then report...somehow
+        time.sleep(remaining_seconds)
 
-def tap(key_to_tap):
-    """Wraps autopy.key.tap, for reporting reporting"""
-    key.tap(key_to_tap)
+    def report(self, text):
+        import sys
+        sys.stdout.flush()
+        print('\r' + text, end="")
 
-def sweep_items(wait=0):
-    click_and_wait(p0_click_monsters, wait/2.0, click=False)
-    click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
+    def tap(self, key_to_tap):
+        """Wraps autopy.key.tap, for reporting reporting"""
+        key.tap(key_to_tap)
+
+    def sweep_items(self, wait=0):
+        self.click_and_wait(p0_click_monsters, wait/2.0, click=False)
+        self.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
+
+    def click_and_wait(self, position=None, seconds=0, click=True):
+        """Go to `position`, click and wait a number of `seconds`.
+
+        Extra: only move and click if the mouse is on the right of the screen!!!
+        """
+        screen_resolution_x = screen.get_size()[0]
+        mouse_pos_x = mouse.get_pos()[0]
+        
+        if mouse_pos_x >= screen_resolution_x / 2:
+            if position:
+                mouse.smooth_move(
+                        position[0]+self.offset_x, position[1]+self.offset_y)
+            if click:
+                mouse.click()
+
+        self.sleep(seconds)
+
+    def repeat_action(self, positions, times, wait):
+        def is_single_position(position):
+            if not isinstance(position, (tuple, list)):
+                return False
+            if not len(position) == 2:
+                return False
+            if not set((type(pos) for pos in position)) == {int}:
+                return False
+            return True
+
+
+        for _ in range(times):
+            if is_single_position(positions):
+                self.click_and_wait(positions, wait)
+            else:
+                for position in positions:
+                    self.click_and_wait(position, float(wait)/len(positions))
