@@ -182,34 +182,36 @@ class Game(object):
             bot.repeat_action(p2_confirm_upgrade, 1, 1)
         
         
-    def restart_browser(self, refresh=True, start_game=True, bot=None):
-        """restarts the browser and sets the game window to be where expected"""
-        bot = bot or self.bot
-        if refresh:
-            bot.click_and_wait(p14_browser_refresh, 20)
-        else:
-            bot.click_and_wait()
-        bot.tap(key.K_F12)
-        bot.sleep(4)
-        bot.click_and_wait(p15_js_console, 3)
-        for char in ' '.join(js_setup.splitlines()):
-            if char in special_chars:
-                bot.key.tap(char, key.K_SHIFT)
-            else:
-                bot.key.tap(char)
-        bot.sleep(2)
-        bot.key.tap(key.K_RETURN)
-        bot.sleep(3)
-        bot.key.tap(key.K_F12)
-        bot.click_and_wait(p16_close_feedback_div, 2)
-        bot.click_and_wait(p17_close_chat, 2)
-        if start_game:
-            bot.click_and_wait(p18_start_flash_app, 20)
 
 class Bot(object):
     def __init__(self, offset_x=0, offset_y=0):
         self.offset_x = offset_x
         self.offset_y = offset_y
+
+    def restart_browser(self, refresh=True, start_game=True, feedback=False):
+        """restarts the browser and sets the game window to be where expected"""
+        if refresh:
+            self.click_and_wait(p14_browser_refresh, 20)
+        else:
+            self.click_and_wait()
+        self.tap(key.K_F12)
+        self.sleep(4)
+        self.click_and_wait(p15_js_console, 3)
+        for char in ' '.join(js_setup.splitlines()):
+            if char in special_chars:
+                self.tap(char, key.K_SHIFT)
+            else:
+                self.tap(char)
+                time.sleep(0.1)
+        self.sleep(2)
+        self.tap(key.K_RETURN)
+        self.sleep(3)
+        self.tap(key.K_F12)
+        if feedback:
+            self.click_and_wait(p16_close_feedback_div, 2)
+        self.click_and_wait(p17_close_chat, 2)
+        if start_game:
+            self.click_and_wait(p18_start_flash_app, 20)
 
     def sleep(self, seconds):
         """I'll use this for reportin how much time i'm waiting i guess"""
@@ -226,9 +228,9 @@ class Bot(object):
         sys.stdout.flush()
         print('\r' + text, end="")
 
-    def tap(self, key_to_tap):
+    def tap(self, key_to_tap, *modifiers):
         """Wraps autopy.key.tap, for reporting reporting"""
-        key.tap(key_to_tap)
+        key.tap(key_to_tap, *modifiers)
 
     def sweep_items(self, wait=0):
         self.click_and_wait(p0_click_monsters, wait/2.0, click=False)
