@@ -63,7 +63,7 @@ class Game(object):
 
     def __init__(self, skip_initial=False, skip_main=False,
             normal_campaing=True, event_ongoing=True, skip_seconds=0,
-            offset_x=0, offset_y=0,play_seconds=5200):
+            offset_x=0, offset_y=0,play_seconds=5100):
         """
         :param bool skip_initial: whether to skip the initial sequence
         :param bool skip_main: whether to skip the main sequence
@@ -124,11 +124,16 @@ class Game(object):
 
         def run_sequence():
             bot.click_and_wait(p1_level_crusaders, 2)
-            for _ in range(6):
-                bot.sweep_items(4)
+            
+            bot.tap('g')  # toggle auto-progress anyway
+            for _ in range(4):
+                self.sweep_items(4)
+                bot.tap('g')  # toggle auto-progress anyway
             bot.click_and_wait(p3_buy_upgrades, 2)
-            for _ in range(6):
-                bot.sweep_items(4)
+            bot.tap('g')  # toggle auto-progress anyway
+            for _ in range(4):
+                self.sweep_items(4)
+                bot.tap('g')  # toggle auto-progress anyway
 
         if forever:
             while True:
@@ -147,13 +152,9 @@ class Game(object):
         bot = bot or self.bot
 
         bot.repeat_action(p4_next_page, 40, 1)
-        
         bot.repeat_action(p5_reset_upgrade, 10, 3)
-
         bot.repeat_action(p6_confirm_reset_1, 3, 3)
-
         bot.repeat_action(p7_blow_up_world_buttom, 3, 1)
-
         bot.repeat_action(p8_continue_to_mission_screen, 2, 10)
 
         if not normal_campaign:
@@ -178,9 +179,15 @@ class Game(object):
         bot = bot or self.bot
         for _ in range(30):
             bot.repeat_action(p2_confirm_upgrade, 10, 0.3)
+            bot.tap('g')  # toggle auto-progress anyway
             bot.repeat_action(p1_level_crusaders, 3, 1)
+            bot.tap('g')  # toggle auto-progress anyway
             bot.repeat_action(p2_confirm_upgrade, 1, 1)
+            bot.tap('g')  # toggle auto-progress anyway
         
+    def sweep_items(self, wait=0):
+        self.click_and_wait(p0_click_monsters, wait/2.0, click=False)
+        self.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
         
 
 class Bot(object):
@@ -230,11 +237,14 @@ class Bot(object):
 
     def tap(self, key_to_tap, *modifiers):
         """Wraps autopy.key.tap, for reporting reporting"""
-        key.tap(key_to_tap, *modifiers)
+        if self._is_mouse_on_the_right():
+            key.tap(key_to_tap, *modifiers)
 
-    def sweep_items(self, wait=0):
-        self.click_and_wait(p0_click_monsters, wait/2.0, click=False)
-        self.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
+    def _is_mouse_on_the_right(self):
+        screen_resolution_x = screen.get_size()[0]
+        mouse_pos_x = mouse.get_pos()[0]
+        
+        return mouse_pos_x >= screen_resolution_x / 2
 
     def click_and_wait(self, position=None, seconds=0, click=True):
         """Go to `position`, click and wait a number of `seconds`.
@@ -244,7 +254,7 @@ class Bot(object):
         screen_resolution_x = screen.get_size()[0]
         mouse_pos_x = mouse.get_pos()[0]
         
-        if mouse_pos_x >= screen_resolution_x / 2:
+        if self._is_mouse_on_the_right():
             if position:
                 mouse.smooth_move(
                         position[0]+self.offset_x, position[1]+self.offset_y)
