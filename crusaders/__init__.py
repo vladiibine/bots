@@ -39,8 +39,10 @@ for(let child of children){
     }
 }
 """
-special_chars="""\
+
+special_chars = """\
 ~!@#$%^&*()_+{}:\"<>?"""
+
 next_level_check_colors = {           
  '0xb9a363',                          
  '0xb9a566',                          
@@ -61,9 +63,7 @@ class Game(object):
     def get_bot_class(self):
         return Bot
 
-    def __init__(self, skip_initial=False, skip_main=False,
-            normal_campaing=True, event_ongoing=True, skip_seconds=0,
-            offset_x=0, offset_y=0,play_seconds=5100):
+    def __init__(self, offset_x=0, offset_y=0, play_seconds=5100):
         """
         :param bool skip_initial: whether to skip the initial sequence
         :param bool skip_main: whether to skip the main sequence
@@ -75,48 +75,41 @@ class Game(object):
         :param int offset_y: number of pixel by which to offset the bot on OY
         """
         self.bot = self.get_bot_class()(offset_x, offset_y)
-
-        self.skip_initial = skip_initial
-        self.skip_main = skip_main
-        self.normal_campaign = normal_campaing
-        self.event_ongoing = event_ongoing
-        self.skip_seconds = skip_seconds
         self.play_seconds = play_seconds
 
-
-    def run_forever(self):
+    def run_forever(self, skip_initial=False, skip_main=False, 
+            normal_campaign=True, event_ongoing=True, skip_seconds=0):
         """plays forever
-        
         """
         t1 = None
         try:
             while True:
-                if not self.skip_initial:
+                if not skip_initial:
                     self.initial_sequence()
                 else:
-                    self.skip_initial = False
+                    skip_initial = False
                 
-                if not self.skip_main:
+                if not skip_main:
                     t1 = int(time.time())
                     print("Started main sequence at {}".format(str(datetime.now())))
-                    while int(time.time()) - t1 < self.play_seconds - self.skip_seconds:
+                    while int(time.time()) - t1 < self.play_seconds - skip_seconds:
                         try:
                             self.main_sequence()
                         except KeyboardInterrupt:
                             print("Interrupted, but taking a pause only")
                             print("Hit Ctrl+C again, to quit, or return, to continue")
                             _ = raw_input('')
-                    self.skip_seconds = 0
+                    skip_seconds = 0
                 else:
-                    self.skip_main = False
+                    skip_main = False
 
                 print("Started to reset at {}".format(str(datetime.now())))
-                self.reset_world(self.normal_campaign, self.event_ongoing)
+                self.reset_world(normal_campaign, event_ongoing)
         except KeyboardInterrupt:
             if t1 is not None:
                 t2 = int(time.time())
                 print("Interrupted. Played for {}. Remaining {}"
-                        .format(t2-t1, self.play_seconds-self.skip_seconds - (t2 - t1)))
+                        .format(t2-t1, self.play_seconds-skip_seconds - (t2 - t1)))
 
     def main_sequence(self, bot=None, forever=False):
         """This buys levels and upgrades"""
@@ -144,7 +137,7 @@ class Game(object):
     def reset_world(self, normal_campaign, event_ongoing, bot=None):
         """This resets the world, after a certain amount of time
 
-        @param bool `normal_campaign`: if true, farms the normal campaign, 
+        @param bool `normal_campaign`: if true, farms the normal campaign,
             otherwise the event's free play
         @param bool event_ongoing: if true, it means theres an event going on 
             currently
@@ -184,11 +177,11 @@ class Game(object):
             bot.tap('g')  # toggle auto-progress anyway
             bot.repeat_action(p2_confirm_upgrade, 1, 1)
             bot.tap('g')  # toggle auto-progress anyway
-        
+
     def sweep_items(self, wait=0):
-        self.click_and_wait(p0_click_monsters, wait/2.0, click=False)
-        self.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
-        
+        self.bot.click_and_wait(p0_click_monsters, wait/2.0, click=False)
+        self.bot.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
+
 
 class Bot(object):
     def __init__(self, offset_x=0, offset_y=0):
@@ -243,7 +236,7 @@ class Bot(object):
     def _is_mouse_on_the_right(self):
         screen_resolution_x = screen.get_size()[0]
         mouse_pos_x = mouse.get_pos()[0]
-        
+
         return mouse_pos_x >= screen_resolution_x / 2
 
     def click_and_wait(self, position=None, seconds=0, click=True):
@@ -251,9 +244,6 @@ class Bot(object):
 
         Extra: only move and click if the mouse is on the right of the screen!!!
         """
-        screen_resolution_x = screen.get_size()[0]
-        mouse_pos_x = mouse.get_pos()[0]
-        
         if self._is_mouse_on_the_right():
             if position:
                 mouse.smooth_move(
