@@ -12,6 +12,7 @@ p2_confirm_upgrade = (870, 485)
 p3_buy_upgrades = (1441, 651)
 p4_next_page = (1443, 704)
 p5_reset_upgrade = (1276, 770)
+p5a_reset_upgrade_while_on_mission = (1130, 776)
 p6_confirm_reset_1 = (872, 641)
 p7_blow_up_world_buttom = (969, 653)
 p8_continue_to_mission_screen = (974, 666)
@@ -78,9 +79,16 @@ class Game(object):
         self.play_seconds = play_seconds
 
     def run_forever(self, skip_initial=False, skip_main=False, 
-            normal_campaign=True, event_ongoing=True, skip_seconds=0):
+            normal_campaign=True, event_ongoing=True, skip_seconds=0,
+            skip_areas=0, expected_max_area=150):
         """plays forever
+        :param int skip_levels: the current area... will run the main sequence
+            *almost* as if startign from that area.
+        :param int expected_max_level: the level at which the reset sequence
+            usually starts.... so like 150 or something
         """
+        skip_seconds += skip_areas / expected_max_area * self.play_seconds
+
         t1 = None
         try:
             while True:
@@ -116,13 +124,13 @@ class Game(object):
         bot = bot or self.bot
 
         def run_sequence():
-            bot.click_and_wait(p1_level_crusaders, 2)
+            bot.click_and_wait(p1_level_crusaders, 0, smooth=False)
             
             bot.tap('g')  # toggle auto-progress anyway
             for _ in range(4):
                 self.sweep_items(4)
                 bot.tap('g')  # toggle auto-progress anyway
-            bot.click_and_wait(p3_buy_upgrades, 2)
+            bot.click_and_wait(p3_buy_upgrades, 0, smooth=False)
             bot.tap('g')  # toggle auto-progress anyway
             for _ in range(4):
                 self.sweep_items(4)
@@ -145,7 +153,10 @@ class Game(object):
         bot = bot or self.bot
 
         bot.repeat_action(p4_next_page, 40, 1)
-        bot.repeat_action(p5_reset_upgrade, 10, 3)
+        bot.repeat_action(p5_reset_upgrade, 5, 2)
+        bot.repeat_action(p5a_reset_upgrade_while_on_mission, 5, 2)
+        bot.repeat_action(p5_reset_upgrade, 5, 2)
+        bot.repeat_action(p5a_reset_upgrade_while_on_mission, 5, 2)
         bot.repeat_action(p6_confirm_reset_1, 3, 3)
         bot.repeat_action(p7_blow_up_world_buttom, 3, 1)
         bot.repeat_action(p8_continue_to_mission_screen, 2, 10)
@@ -239,14 +250,16 @@ class Bot(object):
 
         return mouse_pos_x >= screen_resolution_x / 2
 
-    def click_and_wait(self, position=None, seconds=0, click=True):
+    def click_and_wait(self, position=None, seconds=0, click=True, smooth=True):
         """Go to `position`, click and wait a number of `seconds`.
 
         Extra: only move and click if the mouse is on the right of the screen!!!
         """
+        move_func = mouse.smooth_move if smooth else mouse.move
+
         if self._is_mouse_on_the_right():
             if position:
-                mouse.smooth_move(
+                move_func(
                         position[0]+self.offset_x, position[1]+self.offset_y)
             if click:
                 mouse.click()
