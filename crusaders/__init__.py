@@ -1,10 +1,12 @@
 from __future__ import print_function
 
+from datetime import datetime
+import sys
+import time
+
 from autopy import mouse
 from autopy import screen
 from autopy import key
-import time
-from datetime import datetime
 
 p0_click_monsters = (1352, 407)
 p1_level_crusaders = (1440, 747)
@@ -102,7 +104,9 @@ class Game(object):
                     print("Started main sequence at {}".format(str(datetime.now())))
                     while int(time.time()) - t1 < self.play_seconds - skip_seconds:
                         try:
-                            self.main_sequence()
+                            self.main_sequence(
+                                    t_init=t1, 
+                                    play_for=self.play_seconds - skip_seconds)
                         except KeyboardInterrupt:
                             print("Interrupted, but taking a pause only")
                             print("Hit Ctrl+C again, to quit, or return, to continue")
@@ -119,22 +123,48 @@ class Game(object):
                 print("Interrupted. Played for {}. Remaining {}"
                         .format(t2-t1, self.play_seconds-skip_seconds - (t2 - t1)))
 
-    def main_sequence(self, bot=None, forever=False):
+    def main_sequence(self, bot=None, forever=False, t_init=None, play_for=None):
         """This buys levels and upgrades"""
         bot = bot or self.bot
 
-        def run_sequence():
+        def format_time(seconds):
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            leftover_seconds = (seconds % 60)
+            return "{hours}:{minutes}:{seconds}".format(
+                    hours=hours,
+                    minutes=minutes,
+                    seconds=leftover_seconds)
+
+
+        def report(t_init=t_init, play_for=play_for):
+            seconds_played = int(time.time()) - t_init
+            seconds_to_play = play_for-int(time.time()) + t_init 
+
+            bot.report( "\r" + 
+                    "Played for {} (raw {} secs). Remaining {} (raw {} secs)"
+                    .format(
+                            format_time(seconds_played), 
+                            seconds_played,
+                            format_time(seconds_to_play),
+                            seconds_to_play)
+                    )
+            sys.stdout.flush()
+
+        def run_sequence(report_callback=report):
             bot.click_and_wait(p1_level_crusaders, 0, smooth=False)
             
             bot.tap('g')  # toggle auto-progress anyway
             for _ in range(4):
                 self.sweep_items(4)
-                bot.tap('g')  # toggle auto-progress anyway
+                bot.tap('g')
+                report_callback()
             bot.click_and_wait(p3_buy_upgrades, 0, smooth=False)
-            bot.tap('g')  # toggle auto-progress anyway
+            bot.tap('g')
             for _ in range(4):
                 self.sweep_items(4)
-                bot.tap('g')  # toggle auto-progress anyway
+                bot.tap('g')
+                report_callback()
 
         if forever:
             while True:
