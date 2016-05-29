@@ -89,7 +89,7 @@ class Game(object):
         :param int expected_max_level: the level at which the reset sequence
             usually starts.... so like 150 or something
         """
-        skip_seconds += skip_areas / expected_max_area * self.play_seconds
+        skip_seconds += (skip_areas*1.0) / expected_max_area * self.play_seconds
 
         t1 = None
         try:
