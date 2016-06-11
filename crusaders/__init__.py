@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 
 from datetime import datetime
 import sys
@@ -8,27 +8,63 @@ from autopy import mouse
 from autopy import screen
 from autopy import key
 
-p0_click_monsters = (1352, 407)
-p1_level_crusaders = (1440, 747)
-p2_confirm_upgrade = (870, 485)
-p3_buy_upgrades = (1441, 651)
-p4_next_page = (1443, 704)
-p5_reset_upgrade = (1276, 770)
-p5a_reset_upgrade_while_on_mission = (1130, 776)
-p6_confirm_reset_1 = (872, 641)
-p7_blow_up_world_buttom = (969, 653)
-p8_continue_to_mission_screen = (974, 666)
-p9_free_play_during_event = (992, 505)
-p10_gardeners_free_play = (997, 313)
-p11_free_play_outside_event = (994, 351)
-p12_start_mission = (1240, 676)
-p13_next_level_check_pos = (1381, 333)
-                                      
-p14_browser_refresh = (880, 71)
-p15_js_console = (937, 891)
-p16_close_feedback_div = (1273, 166)
-p17_close_chat = (1567, 131)
-p18_start_flash_app = (958, 653)
+class PositionTransformer(object):
+    def __init__(self):
+        self.actual_resolution = screen.get_size()
+        self.__dict__.update(self._create_attributes())
+
+    def __getattribute__(self, name):
+        if not name.lower().startswith('p'):
+             super(PositionTransformer, self).__getattribute__(name)
+        
+        super_getattribute = super(PositionTransformer, self).__getattribute__
+        _positions = super_getattribute('_positions')
+        actual_resolution = super_getattribute('actual_resolution')
+        if actual_resolution in _positions:
+            return _positions[actual_resolution][name]
+
+        default_resolution = super_getattribute('default_resolution')
+        default_pos = _positions[default_resolution]
+        ratio_x = actual_resolution[0] / default_resolution[0]
+        ratio_y = actual_resolution[1] / default_resolution[1]
+        new_x = int(default_pos[name][0] * ratio_x)
+        new_y = int(default_pos[name][1] * ratio_y)
+
+        return new_x, new_y
+
+    def _create_attributes(self):
+        attributes = {}
+        for key in self._positions[self.default_resolution]:
+            attributes[key] = getattr(self, key)
+        return attributes
+
+
+    default_resolution = (1600, 900)
+    _positions = {
+        default_resolution: dict(
+            p0_click_monsters = (1352, 407),
+            p1_level_crusaders = (1440, 747),
+            p2_confirm_upgrade = (870, 485),
+            p3_buy_upgrades = (1441, 651),
+            p4_next_page = (1443, 704),
+            p5_reset_upgrade = (1276, 770),
+            p5a_reset_upgrade_while_on_mission = (1130, 776),
+            p6_confirm_reset_1 = (872, 641),
+            p7_blow_up_world_buttom = (969, 653),
+            p8_continue_to_mission_screen = (974, 666),
+            p9_free_play_during_event = (992, 505),
+            p10_gardeners_free_play = (997, 313),
+            p11_free_play_outside_event = (994, 351),
+            p12_start_mission = (1240, 676),
+            p13_next_level_check_pos = (1381, 333),
+            p14_browser_refresh = (880, 71),
+            p15_js_console = (937, 891),
+            p16_close_feedback_div = (1273, 166),
+            p17_close_chat = (1567, 131),
+            p18_start_flash_app = (958, 653),
+            p19_CALIBRATION_COORDS = (1169, 611)
+    )}
+
 
 js_setup = """\
 var children = Array.from($('#content-canvas').children()); 
@@ -66,7 +102,7 @@ class Game(object):
     def get_bot_class(self):
         return Bot
 
-    def __init__(self, offset_x=0, offset_y=0, play_seconds=7500):
+    def __init__(self, offset_x=0, offset_y=0, play_seconds=7500, resolution=(1600,900)):
         """
         :param bool skip_initial: whether to skip the initial sequence
         :param bool skip_main: whether to skip the main sequence
@@ -77,7 +113,8 @@ class Game(object):
         :param int offset_x: number of pixels by which to offset the bot on OX
         :param int offset_y: number of pixel by which to offset the bot on OY
         """
-        self.bot = self.get_bot_class()(offset_x, offset_y)
+        self.positions = PositionTransformer()
+        self.bot = self.get_bot_class()(offset_x, offset_y, self.positions)
         self.play_seconds = play_seconds
 
     def run_forever(self, skip_initial=False, skip_main=False, 
@@ -89,7 +126,7 @@ class Game(object):
         :param int expected_max_level: the level at which the reset sequence
             usually starts.... so like 150 or something
         """
-        skip_seconds += (skip_areas*1.0) / expected_max_area * self.play_seconds
+        skip_seconds += (skip_areas) / expected_max_area * self.play_seconds
 
         t1 = None
         try:
@@ -152,14 +189,14 @@ class Game(object):
             sys.stdout.flush()
 
         def run_sequence(report_callback=report):
-            bot.click_and_wait(p1_level_crusaders, 0, smooth=False)
+            bot.click_and_wait(self.positions.p1_level_crusaders, 0, smooth=False)
             
             bot.tap('g')  # toggle auto-progress anyway
             for _ in range(4):
                 self.sweep_items(4)
                 bot.tap('g')
                 report_callback()
-            bot.click_and_wait(p3_buy_upgrades, 0, smooth=False)
+            bot.click_and_wait(self.positions.p3_buy_upgrades, 0, smooth=False)
             bot.tap('g')
             for _ in range(4):
                 self.sweep_items(4)
@@ -182,63 +219,65 @@ class Game(object):
         """
         bot = bot or self.bot
 
-        bot.repeat_action(p4_next_page, 40, 1)
-        bot.repeat_action(p5_reset_upgrade, 5, 2)
-        bot.repeat_action(p5a_reset_upgrade_while_on_mission, 5, 2)
-        bot.repeat_action(p5_reset_upgrade, 5, 2)
-        bot.repeat_action(p5a_reset_upgrade_while_on_mission, 5, 2)
-        bot.repeat_action(p6_confirm_reset_1, 3, 6)
-        bot.repeat_action(p7_blow_up_world_buttom, 5, 3)
-        bot.repeat_action(p8_continue_to_mission_screen, 3, 10)
+        bot.repeat_action(self.positions.p4_next_page, 40, 1)
+        bot.repeat_action(self.positions.p5_reset_upgrade, 5, 2)
+        bot.repeat_action(self.positions.p5a_reset_upgrade_while_on_mission, 5, 2)
+        bot.repeat_action(self.positions.p5_reset_upgrade, 5, 2)
+        bot.repeat_action(self.positions.p5a_reset_upgrade_while_on_mission, 5, 2)
+        bot.repeat_action(self.positions.p6_confirm_reset_1, 3, 6)
+        bot.repeat_action(self.positions.p7_blow_up_world_buttom, 5, 3)
+        bot.repeat_action(self.positions.p8_continue_to_mission_screen, 3, 10)
 
         if not normal_campaign:
-            bot.repeat_action(p10_gardeners_free_play, 2, 1)
-            bot.repeat_action(p12_start_mission, 2, 1)
-            bot.repeat_action(p9_free_play_during_event, 2, 1)
-            bot.repeat_action(p12_start_mission, 2, 1)
+            bot.repeat_action(self.positions.p10_gardeners_free_play, 2, 1)
+            bot.repeat_action(self.positions.p12_start_mission, 2, 1)
+            bot.repeat_action(self.positions.p9_free_play_during_event, 2, 1)
+            bot.repeat_action(self.positions.p12_start_mission, 2, 1)
         elif event_ongoing:
-            bot.repeat_action(p9_free_play_during_event, 1, 2)
-            bot.repeat_action(p12_start_mission, 1, 2)
-            bot.repeat_action(p9_free_play_during_event, 1, 2)
-            bot.repeat_action(p12_start_mission, 1, 2)
+            bot.repeat_action(self.positions.p9_free_play_during_event, 1, 2)
+            bot.repeat_action(self.positions.p12_start_mission, 1, 2)
+            bot.repeat_action(self.positions.p9_free_play_during_event, 1, 2)
+            bot.repeat_action(self.positions.p12_start_mission, 1, 2)
         else:
-            bot.repeat_action(p11_free_play_outside_event, 1, 2)
-            bot.repeat_action(p12_start_mission, 1, 2)
-            bot.repeat_action(p11_free_play_outside_event, 1, 2)
-            bot.repeat_action(p12_start_mission, 1, 2)
+            bot.repeat_action(self.positions.p11_free_play_outside_event, 1, 2)
+            bot.repeat_action(self.positions.p12_start_mission, 1, 2)
+            bot.repeat_action(self.positions.p11_free_play_outside_event, 1, 2)
+            bot.repeat_action(self.positions.p12_start_mission, 1, 2)
 
     def initial_sequence(self, bot=None):
         """Starts to click, in order to kill the first monsters, and get some gold
         """
         bot = bot or self.bot
         for _ in range(30):
-            bot.repeat_action(p2_confirm_upgrade, 10, 0.3)
+            bot.repeat_action(self.positions.p2_confirm_upgrade, 10, 0.3)
             bot.tap('g')  # toggle auto-progress anyway
-            bot.repeat_action(p1_level_crusaders, 3, 1)
+            bot.repeat_action(self.positions.p1_level_crusaders, 3, 1)
             bot.tap('g')  # toggle auto-progress anyway
-            bot.repeat_action(p2_confirm_upgrade, 1, 1)
+            bot.repeat_action(self.positions.p2_confirm_upgrade, 1, 1)
             bot.tap('g')  # toggle auto-progress anyway
 
     def sweep_items(self, wait=0):
-        self.bot.click_and_wait(p0_click_monsters, wait/2.0, click=False)
+        self.bot.click_and_wait(self.positions.p0_click_monsters, wait/2.0, click=False)
         self.bot.tap('g')
-        self.bot.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
+        self.bot.click_and_wait(self.positions.p2_confirm_upgrade, wait/2.0, click=False)
 
 
 class Bot(object):
-    def __init__(self, offset_x=0, offset_y=0):
+    def __init__(self, offset_x=0, offset_y=0, positions=None):
         self.offset_x = offset_x
         self.offset_y = offset_y
+        assert positions is not None
+        self.positions = positions
 
     def restart_browser(self, refresh=True, start_game=True, feedback=False):
         """restarts the browser and sets the game window to be where expected"""
         if refresh:
-            self.click_and_wait(p14_browser_refresh, 20)
+            self.click_and_wait(self.positions.p14_browser_refresh, 20)
         else:
             self.click_and_wait()
         self.tap(key.K_F12)
         self.sleep(4)
-        self.click_and_wait(p15_js_console, 3)
+        self.click_and_wait(self.positions.p15_js_console, 3)
         for char in ' '.join(js_setup.splitlines()):
             if char in special_chars:
                 self.tap(char, key.K_SHIFT)
@@ -250,10 +289,10 @@ class Bot(object):
         self.sleep(3)
         self.tap(key.K_F12)
         if feedback:
-            self.click_and_wait(p16_close_feedback_div, 2)
-        self.click_and_wait(p17_close_chat, 2)
+            self.click_and_wait(self.positions.p16_close_feedback_div, 2)
+        self.click_and_wait(self.positions.p17_close_chat, 2)
         if start_game:
-            self.click_and_wait(p18_start_flash_app, 20)
+            self.click_and_wait(self.positions.p18_start_flash_app, 20)
 
     def sleep(self, seconds):
         """I'll use this for reportin how much time i'm waiting i guess"""
@@ -279,7 +318,7 @@ class Bot(object):
         screen_resolution_x = screen.get_size()[0]
         mouse_pos_x = mouse.get_pos()[0]
 
-        return mouse_pos_x >= screen_resolution_x / 2
+        return mouse_pos_x >= screen_resolution_x // 2
 
     def click_and_wait(self, position=None, seconds=0, click=True, smooth=True):
         """Go to `position`, click and wait a number of `seconds`.
@@ -291,7 +330,8 @@ class Bot(object):
         if self._is_mouse_on_the_right():
             if position:
                 move_func(
-                        position[0]+self.offset_x, position[1]+self.offset_y)
+                        position[0]+self.offset_x, 
+                        position[1]+self.offset_y)
             if click:
                 mouse.click()
 
@@ -313,4 +353,4 @@ class Bot(object):
                 self.click_and_wait(positions, wait)
             else:
                 for position in positions:
-                    self.click_and_wait(position, float(wait)/len(positions))
+                    self.click_and_wait(position, float(wait)//len(positions))
