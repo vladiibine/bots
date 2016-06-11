@@ -66,7 +66,7 @@ class Game(object):
     def get_bot_class(self):
         return Bot
 
-    def __init__(self, offset_x=0, offset_y=0, play_seconds=5100):
+    def __init__(self, offset_x=0, offset_y=0, play_seconds=7500):
         """
         :param bool skip_initial: whether to skip the initial sequence
         :param bool skip_main: whether to skip the main sequence
@@ -187,14 +187,14 @@ class Game(object):
         bot.repeat_action(p5a_reset_upgrade_while_on_mission, 5, 2)
         bot.repeat_action(p5_reset_upgrade, 5, 2)
         bot.repeat_action(p5a_reset_upgrade_while_on_mission, 5, 2)
-        bot.repeat_action(p6_confirm_reset_1, 3, 3)
-        bot.repeat_action(p7_blow_up_world_buttom, 3, 1)
-        bot.repeat_action(p8_continue_to_mission_screen, 2, 10)
+        bot.repeat_action(p6_confirm_reset_1, 3, 6)
+        bot.repeat_action(p7_blow_up_world_buttom, 5, 3)
+        bot.repeat_action(p8_continue_to_mission_screen, 3, 10)
 
         if not normal_campaign:
-            bot.repeat_action(p10_gardeners_free_play, 2, 5)
+            bot.repeat_action(p10_gardeners_free_play, 2, 1)
             bot.repeat_action(p12_start_mission, 2, 1)
-            bot.repeat_action(p10_gardeners_free_play, 2, 5)
+            bot.repeat_action(p9_free_play_during_event, 2, 1)
             bot.repeat_action(p12_start_mission, 2, 1)
         elif event_ongoing:
             bot.repeat_action(p9_free_play_during_event, 1, 2)
@@ -221,6 +221,7 @@ class Game(object):
 
     def sweep_items(self, wait=0):
         self.bot.click_and_wait(p0_click_monsters, wait/2.0, click=False)
+        self.bot.tap('g')
         self.bot.click_and_wait(p2_confirm_upgrade, wait/2.0, click=False)
 
 
