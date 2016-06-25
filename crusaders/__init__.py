@@ -29,6 +29,8 @@ p15_js_console = (937, 891)
 p16_close_feedback_div = (1273, 166)
 p17_close_chat = (1567, 131)
 p18_start_flash_app = (958, 653)
+#p19_close_changelog = (1214, 194)
+p19_close_changelog = (1239, 192)
 
 js_setup = """\
 var children = Array.from($('#content-canvas').children()); 
@@ -82,7 +84,7 @@ class Game(object):
 
     def run_forever(self, skip_initial=False, skip_main=False, 
             normal_campaign=True, event_ongoing=True, skip_seconds=0,
-            skip_areas=0, expected_max_area=150):
+            skip_areas=0, skip_reset=False, expected_max_area=150):
         """plays forever
         :param int skip_levels: the current area... will run the main sequence
             *almost* as if startign from that area.
@@ -94,13 +96,13 @@ class Game(object):
         t1 = None
         try:
             while True:
+                t1 = int(time.time())
                 if not skip_initial:
                     self.initial_sequence()
                 else:
                     skip_initial = False
                 
                 if not skip_main:
-                    t1 = int(time.time())
                     print("Started main sequence at {}".format(str(datetime.now())))
                     while int(time.time()) - t1 < self.play_seconds - skip_seconds:
                         try:
@@ -116,7 +118,10 @@ class Game(object):
                     skip_main = False
 
                 print("Started to reset at {}".format(str(datetime.now())))
-                self.reset_world(normal_campaign, event_ongoing)
+                if not skip_reset:
+                    self.reset_world()
+                self.bot.restart_browser()
+                self.start_new_campaign(normal_campaign, event_ongoing)
         except KeyboardInterrupt:
             if t1 is not None:
                 t2 = int(time.time())
@@ -128,6 +133,7 @@ class Game(object):
         bot = bot or self.bot
 
         def format_time(seconds):
+            seconds = int(seconds)
             hours = seconds // 3600
             minutes = (seconds % 3600) // 60
             leftover_seconds = (seconds % 60)
@@ -139,7 +145,7 @@ class Game(object):
 
         def report(t_init=t_init, play_for=play_for):
             seconds_played = int(time.time()) - t_init
-            seconds_to_play = play_for-int(time.time()) + t_init 
+            seconds_to_play = play_for-int(time.time()) + t_init
 
             bot.report( "\r" + 
                     "Played for {} (raw {} secs). Remaining {} (raw {} secs)"
@@ -172,7 +178,7 @@ class Game(object):
         else:
             run_sequence()
 
-    def reset_world(self, normal_campaign, event_ongoing, bot=None):
+    def reset_world(self, bot=None):
         """This resets the world, after a certain amount of time
 
         @param bool `normal_campaign`: if true, farms the normal campaign,
@@ -190,6 +196,13 @@ class Game(object):
         bot.repeat_action(p6_confirm_reset_1, 3, 6)
         bot.repeat_action(p7_blow_up_world_buttom, 5, 3)
         bot.repeat_action(p8_continue_to_mission_screen, 3, 10)
+
+    def start_new_campaign(self, normal_campaign, event_ongoing, bot=None):
+        """Starts another campaign
+        """
+        bot = bot or self.bot
+
+        bot.sleep(10) # Waiting 10 seconds for the game to load 
 
         if not normal_campaign:
             bot.repeat_action(p10_gardeners_free_play, 2, 1)
@@ -211,6 +224,8 @@ class Game(object):
         """Starts to click, in order to kill the first monsters, and get some gold
         """
         bot = bot or self.bot
+
+        bot.repeat_action(p19_close_changelog, 4, 0.5)
         for _ in range(30):
             bot.repeat_action(p2_confirm_upgrade, 10, 0.3)
             bot.tap('g')  # toggle auto-progress anyway
@@ -279,7 +294,7 @@ class Bot(object):
         screen_resolution_x = screen.get_size()[0]
         mouse_pos_x = mouse.get_pos()[0]
 
-        return mouse_pos_x >= screen_resolution_x / 2
+        return mouse_pos_x >= 800 # assuming 1600x900 resolution
 
     def click_and_wait(self, position=None, seconds=0, click=True, smooth=True):
         """Go to `position`, click and wait a number of `seconds`.
@@ -312,5 +327,5 @@ class Bot(object):
             if is_single_position(positions):
                 self.click_and_wait(positions, wait)
             else:
-                for position in positions:
-                    self.click_and_wait(position, float(wait)/len(positions))
+                for position in positions:cc    k   
+                    elf.click_and_wait(position, float(wait)/len(positions))
