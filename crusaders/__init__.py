@@ -294,7 +294,7 @@ class Bot(object):
         screen_resolution_x = screen.get_size()[0]
         mouse_pos_x = mouse.get_pos()[0]
 
-        return mouse_pos_x >= 800 # assuming 1600x900 resolution
+        return mouse_pos_x >= screen_resolution_x / 2 /2
 
     def click_and_wait(self, position=None, seconds=0, click=True, smooth=True):
         """Go to `position`, click and wait a number of `seconds`.
@@ -327,5 +327,5 @@ class Bot(object):
             if is_single_position(positions):
                 self.click_and_wait(positions, wait)
             else:
-                for position in positions:cc    k   
-                    elf.click_and_wait(position, float(wait)/len(positions))
+                for position in positions: 
+                    self.click_and_wait(position, float(wait)/len(positions))
